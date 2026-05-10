@@ -27,7 +27,7 @@ export default function BookPage() {
     if (!id) return
     setLoading(true)
     Promise.all([
-      api.get<Book>(`/api/v1/books/${id}`),
+      api.get<BookDetail>(`/api/v1/books/${id}`),
       api.get<Review[]>(`/api/v1/books/${id}/reviews?skip=0&limit=${LIMIT}`),
     ])
       .then(([b, r]) => {
