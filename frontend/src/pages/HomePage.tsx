@@ -102,7 +102,7 @@ export default function HomePage() {
       </section>
 
       {/* Feed */}
-      <main className="max-w-4xl mx-auto px-4 py-10">
+      <main className="max-w-4xl mx-auto px-4 py-10 -mt-px">
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Reseñas recientes</h2>
           <Link to="/explorar" className="text-sm text-[#f97316] hover:underline font-medium">
