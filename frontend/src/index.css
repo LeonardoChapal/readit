@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #f97316;
+  --color-primary-dark: #ea6c0a;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@keyframes hero-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-18px) rotate(3deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-12px) rotate(-2deg); }
+}
+
+.hero-animated {
+  background: linear-gradient(135deg, #f97316, #ea580c, #c2410c, #9a3412);
+  background-size: 300% 300%;
+  animation: hero-gradient 10s ease infinite;
+}
+
+.float      { animation: float      7s ease-in-out infinite; }
+.float-slow { animation: float-slow 9s ease-in-out infinite; }
