@@ -94,9 +94,9 @@ export default function HomePage() {
         </div>
 
         {/* Ola inferior */}
-        <div className="absolute bottom-0 left-0 right-0 leading-none">
+        <div className="absolute bottom-[-2px] left-0 right-0 leading-none">
           <svg viewBox="0 0 1440 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full block">
-            <path d="M0 56L1440 56L1440 0Q1080 56 720 32Q360 8 0 40Z" fill="#f9fafb" className="dark:fill-gray-900" />
+            <path d="M0 58L1440 58L1440 0Q1080 56 720 32Q360 8 0 40Z" className="fill-gray-50 dark:fill-gray-900" />
           </svg>
         </div>
       </section>
