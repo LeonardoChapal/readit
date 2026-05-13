@@ -8,8 +8,15 @@ import { useAuth } from '../hooks/useAuth'
 import StarRating from '../components/StarRating'
 import type { BookDetail } from '../types/book'
 import type { Review } from '../types/review'
+import type { ReadingListEntry, ReadingStatus } from '../types/reading_list'
 
 const LIMIT = 20
+
+const STATUS_LABELS: Record<ReadingStatus, string> = {
+  want_to_read: 'Quiero leer',
+  reading: 'Leyendo',
+  read: 'Ya leí',
+}
 
 export default function BookPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,6 +29,10 @@ export default function BookPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [notFound, setNotFound] = useState(false)
+
+  const [rlEntry, setRlEntry] = useState<ReadingListEntry | null>(null)
+  const [rlLoading, setRlLoading] = useState(false)
+  const [rlOpen, setRlOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -38,6 +49,37 @@ export default function BookPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!user || !id) return
+    api.get<ReadingListEntry | null>(`/api/v1/reading-list/${id}`)
+      .then(data => setRlEntry(data))
+      .catch(() => {})
+  }, [user, id])
+
+  async function setStatus(status: ReadingStatus) {
+    if (!id) return
+    setRlLoading(true)
+    setRlOpen(false)
+    try {
+      const data = await api.put<ReadingListEntry>(`/api/v1/reading-list/${id}`, { status })
+      setRlEntry(data)
+    } finally {
+      setRlLoading(false)
+    }
+  }
+
+  async function removeFromList() {
+    if (!id) return
+    setRlLoading(true)
+    setRlOpen(false)
+    try {
+      await api.delete(`/api/v1/reading-list/${id}`)
+      setRlEntry(null)
+    } finally {
+      setRlLoading(false)
+    }
+  }
 
   async function loadMore() {
     if (!id) return
@@ -114,14 +156,58 @@ export default function BookPage() {
               </div>
             )}
 
-            <div className="mt-5">
+            <div className="mt-5 flex flex-wrap gap-3">
               {user ? (
-                <Link
-                  to={`/nueva-resena?libro=${book.id}`}
-                  className="inline-block bg-[#f97316] hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
-                >
-                  Escribir reseña
-                </Link>
+                <>
+                  <Link
+                    to={`/nueva-resena?libro=${book.id}`}
+                    className="inline-block bg-[#f97316] hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
+                  >
+                    Escribir reseña
+                  </Link>
+
+                  {/* Botón lista de lectura */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setRlOpen(o => !o)}
+                      disabled={rlLoading}
+                      className={`flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-lg border transition disabled:opacity-50 ${
+                        rlEntry
+                          ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700 text-[#f97316]'
+                          : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-[#f97316] hover:text-[#f97316]'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      {rlEntry ? STATUS_LABELS[rlEntry.status as ReadingStatus] : 'Agregar a lista'}
+                    </button>
+
+                    {rlOpen && (
+                      <div className="absolute left-0 top-full mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 z-10">
+                        {(Object.entries(STATUS_LABELS) as [ReadingStatus, string][]).map(([status, label]) => (
+                          <button
+                            key={status}
+                            onClick={() => setStatus(status)}
+                            className={`w-full text-left px-4 py-2.5 text-sm transition hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                              rlEntry?.status === status ? 'text-[#f97316] font-semibold' : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                        {rlEntry && (
+                          <button
+                            onClick={removeFromList}
+                            className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition border-t border-gray-100 dark:border-gray-700"
+                          >
+                            Quitar de lista
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
                 <Link
                   to="/login"

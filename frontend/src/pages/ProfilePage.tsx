@@ -2,12 +2,20 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ReviewCard from '../components/ReviewCard'
+import BookCover from '../components/BookCover'
 import UserAvatar from '../components/UserAvatar'
 import { api, uploadAvatar } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import type { UserProfile } from '../types/user'
 import type { Review } from '../types/review'
 import type { User } from '../types/auth'
+import type { ReadingListEntry, ReadingStatus } from '../types/reading_list'
+
+const STATUS_LABELS: Record<ReadingStatus, string> = {
+  want_to_read: 'Quiero leer',
+  reading: 'Leyendo',
+  read: 'Ya leí',
+}
 
 interface EditForm {
   username: string
@@ -30,6 +38,8 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false)
 
   const LIMIT = 20
+
+  const [readingList, setReadingList] = useState<ReadingListEntry[]>([])
 
   const [avatarBust, setAvatarBust] = useState<number | undefined>(undefined)
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -69,6 +79,13 @@ export default function ProfilePage() {
   }, [username, reviews.length])
 
   const isOwner = user?.username === username
+
+  useEffect(() => {
+    if (!isOwner) return
+    api.get<ReadingListEntry[]>('/api/v1/reading-list')
+      .then(setReadingList)
+      .catch(() => {})
+  }, [isOwner])
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.[0]) return
@@ -294,6 +311,41 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Lista de lectura */}
+        {isOwner && readingList.length > 0 && (
+          <div className="mb-10">
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-5">Mi lista de lectura</h2>
+            {(['want_to_read', 'reading', 'read'] as ReadingStatus[]).map(status => {
+              const group = readingList.filter(e => e.status === status)
+              if (group.length === 0) return null
+              return (
+                <div key={status} className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                    {STATUS_LABELS[status]}
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {group.map(entry => (
+                      <Link
+                        key={entry.id}
+                        to={`/libro/${entry.book_id}`}
+                        className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 hover:border-[#f97316] hover:shadow-sm transition group"
+                      >
+                        <BookCover bookId={entry.book_id} title={entry.book.title} className="w-8 h-12 rounded-md flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-[#f97316] transition truncate max-w-[140px]">
+                            {entry.book.title}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[140px]">{entry.book.author}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 

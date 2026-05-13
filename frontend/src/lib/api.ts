@@ -48,6 +48,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(options.headers ?? {}),
   }
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  if (res.status === 204) return undefined as T
   const data = await res.json()
   if (!res.ok) throw new Error(data.detail ?? 'Error en la solicitud')
   return data as T

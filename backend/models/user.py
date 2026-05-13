@@ -17,3 +17,4 @@ class User(Base):
     reviews: Mapped[list["Review"]] = relationship("Review", back_populates="user")
     comments: Mapped[list["Comment"]] = relationship("Comment", back_populates="user")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="user")
+    reading_list: Mapped[list["ReadingList"]] = relationship("ReadingList", back_populates="user")

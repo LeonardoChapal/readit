@@ -17,6 +17,7 @@ from routers.comments import comment_router
 from routers import admin as admin_router
 from routers import users as users_router
 from routers import search as search_router
+from routers import reading_list as reading_list_router
 
 
 @asynccontextmanager
@@ -46,6 +47,7 @@ app.include_router(comment_router)
 app.include_router(admin_router.router)
 app.include_router(users_router.router)
 app.include_router(search_router.router)
+app.include_router(reading_list_router.router)
 
 
 @app.get("/")
