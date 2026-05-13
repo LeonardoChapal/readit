@@ -8,6 +8,12 @@ interface Props {
   bust?: number
 }
 
+type CoverState = 'backend' | 'openlibrary' | 'error'
+
+function openLibraryUrl(title: string) {
+  return `https://covers.openlibrary.org/b/title/${encodeURIComponent(title)}-M.jpg`
+}
+
 const Placeholder = ({ className }: { className: string }) => (
   <div className={`${className} bg-orange-50 dark:bg-orange-900/30 border border-orange-100 dark:border-orange-800 flex items-center justify-center flex-shrink-0`}>
     <svg className="w-5 h-5 text-[#f97316]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -18,16 +24,25 @@ const Placeholder = ({ className }: { className: string }) => (
 )
 
 export default function BookCover({ bookId, title, className = 'w-12 h-16 rounded-xl', bust }: Props) {
-  const [error, setError] = useState(false)
+  const [state, setState] = useState<CoverState>('backend')
 
-  if (error) return <Placeholder className={className} />
+  if (state === 'error') return <Placeholder className={className} />
+
+  const src = state === 'backend'
+    ? bookCoverUrl(bookId, bust)
+    : openLibraryUrl(title)
+
+  function handleError() {
+    if (state === 'backend') setState('openlibrary')
+    else setState('error')
+  }
 
   return (
     <img
-      src={bookCoverUrl(bookId, bust)}
+      src={src}
       alt={title}
       className={`${className} object-cover flex-shrink-0`}
-      onError={() => setError(true)}
+      onError={handleError}
     />
   )
 }
