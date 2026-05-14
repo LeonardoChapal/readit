@@ -25,13 +25,11 @@ def _detect_mime(data: bytes) -> str:
 
 
 @router.get("", response_model=list[BookOut])
-def list_books(db: Session = Depends(get_db)):
-    return (
-        db.query(Book)
-        .options(joinedload(Book.genre))
-        .order_by(Book.title)
-        .all()
-    )
+def list_books(genre_id: int | None = None, db: Session = Depends(get_db)):
+    q = db.query(Book).options(joinedload(Book.genre))
+    if genre_id is not None:
+        q = q.filter(Book.genre_id == genre_id)
+    return q.order_by(Book.title).all()
 
 
 @router.get("/{book_id}", response_model=BookDetail)
