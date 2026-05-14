@@ -234,6 +234,12 @@ export default function ProfilePage() {
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.comment_count}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comentarios</p>
             </div>
+            {isOwner && readingList.length > 0 && (
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{readingList.length}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">En lista</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

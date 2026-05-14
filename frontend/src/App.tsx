@@ -11,6 +11,7 @@ import ExplorePage from './pages/ExplorePage'
 import ProfilePage from './pages/ProfilePage'
 import SearchPage from './pages/SearchPage'
 import BookPage from './pages/BookPage'
+import NotFoundPage from './pages/NotFoundPage'
 import DashboardPage from './pages/admin/DashboardPage'
 import UsersPage from './pages/admin/UsersPage'
 import BooksPage from './pages/admin/BooksPage'
@@ -33,6 +34,8 @@ export default function App() {
           <Route path="/usuario/:username" element={<ProfilePage />} />
           <Route path="/buscar" element={<SearchPage />} />
           <Route path="/libro/:id" element={<BookPage />} />
+
+          <Route path="*" element={<NotFoundPage />} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<DashboardPage />} />

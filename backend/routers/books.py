@@ -53,18 +53,21 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{book_id}/reviews", response_model=list[ReviewOut])
-def get_book_reviews(book_id: int, skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+def get_book_reviews(book_id: int, sort: str = "top", skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
     if not db.query(Book).filter(Book.id == book_id).first():
         raise HTTPException(status_code=404, detail="Libro no encontrado")
-    return (
+    q = (
         db.query(Review)
         .options(joinedload(Review.book).joinedload(Book.genre), joinedload(Review.user))
         .filter(Review.book_id == book_id, Review.status == "active")
-        .order_by(Review.score.desc(), Review.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
     )
+    if sort == "recent":
+        q = q.order_by(Review.created_at.desc())
+    elif sort == "rating":
+        q = q.order_by(Review.rating.desc().nulls_last(), Review.created_at.desc())
+    else:
+        q = q.order_by(Review.score.desc(), Review.created_at.desc())
+    return q.offset(skip).limit(limit).all()
 
 
 @router.get("/{book_id}/cover")

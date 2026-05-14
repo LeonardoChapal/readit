@@ -11,12 +11,19 @@ import type { Review } from '../types/review'
 import type { ReadingListEntry, ReadingStatus } from '../types/reading_list'
 
 const LIMIT = 20
+type Sort = 'top' | 'recent' | 'rating'
 
 const STATUS_LABELS: Record<ReadingStatus, string> = {
   want_to_read: 'Quiero leer',
   reading: 'Leyendo',
   read: 'Ya leí',
 }
+
+const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  { value: 'top', label: 'Más votadas' },
+  { value: 'recent', label: 'Más recientes' },
+  { value: 'rating', label: 'Mejor valoradas' },
+]
 
 export default function BookPage() {
   const { id } = useParams<{ id: string }>()
@@ -29,6 +36,7 @@ export default function BookPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [sort, setSort] = useState<Sort>('top')
 
   const [rlEntry, setRlEntry] = useState<ReadingListEntry | null>(null)
   const [rlLoading, setRlLoading] = useState(false)
@@ -37,18 +45,20 @@ export default function BookPage() {
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    Promise.all([
-      api.get<BookDetail>(`/api/v1/books/${id}`),
-      api.get<Review[]>(`/api/v1/books/${id}/reviews?skip=0&limit=${LIMIT}`),
-    ])
-      .then(([b, r]) => {
-        setBook(b as BookDetail)
-        setReviews(r)
-        setHasMore(r.length === LIMIT)
-      })
+    api.get<BookDetail>(`/api/v1/books/${id}`)
+      .then(b => setBook(b as BookDetail))
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!id || loading) return
+    api.get<Review[]>(`/api/v1/books/${id}/reviews?sort=${sort}&skip=0&limit=${LIMIT}`)
+      .then(r => {
+        setReviews(r)
+        setHasMore(r.length === LIMIT)
+      })
+  }, [id, sort, loading])
 
   useEffect(() => {
     if (!user || !id) return
@@ -85,7 +95,7 @@ export default function BookPage() {
     if (!id) return
     setLoadingMore(true)
     try {
-      const data = await api.get<Review[]>(`/api/v1/books/${id}/reviews?skip=${reviews.length}&limit=${LIMIT}`)
+      const data = await api.get<Review[]>(`/api/v1/books/${id}/reviews?sort=${sort}&skip=${reviews.length}&limit=${LIMIT}`)
       setReviews(prev => [...prev, ...data])
       setHasMore(data.length === LIMIT)
     } finally {
@@ -113,6 +123,9 @@ export default function BookPage() {
       </div>
     )
   }
+
+  const ownReview = user ? reviews.find(r => r.user.username === user.username) : null
+  const otherReviews = ownReview ? reviews.filter(r => r.id !== ownReview.id) : reviews
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -159,14 +172,15 @@ export default function BookPage() {
             <div className="mt-5 flex flex-wrap gap-3">
               {user ? (
                 <>
-                  <Link
-                    to={`/nueva-resena?libro=${book.id}`}
-                    className="inline-block bg-[#f97316] hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
-                  >
-                    Escribir reseña
-                  </Link>
+                  {!ownReview && (
+                    <Link
+                      to={`/nueva-resena?libro=${book.id}`}
+                      className="inline-block bg-[#f97316] hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition"
+                    >
+                      Escribir reseña
+                    </Link>
+                  )}
 
-                  {/* Botón lista de lectura */}
                   <div className="relative">
                     <button
                       onClick={() => setRlOpen(o => !o)}
@@ -221,10 +235,27 @@ export default function BookPage() {
         </div>
 
         {/* Reseñas */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <h2 className="font-bold text-gray-800 dark:text-gray-100">
             Reseñas{reviews.length > 0 ? ` (${reviews.length}${hasMore ? '+' : ''})` : ''}
           </h2>
+          {reviews.length > 1 && (
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
+              {SORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSort(opt.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                    sort === opt.value
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {reviews.length === 0 ? (
@@ -242,7 +273,18 @@ export default function BookPage() {
         ) : (
           <>
             <div className="space-y-4">
-              {reviews.map(r => <ReviewCard key={r.id} review={r} />)}
+              {/* Reseña propia destacada */}
+              {ownReview && (
+                <div className="ring-2 ring-[#f97316] ring-offset-2 dark:ring-offset-gray-900 rounded-2xl">
+                  <div className="relative">
+                    <span className="absolute -top-2.5 left-4 bg-[#f97316] text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
+                      Tu reseña
+                    </span>
+                    <ReviewCard review={ownReview} />
+                  </div>
+                </div>
+              )}
+              {otherReviews.map(r => <ReviewCard key={r.id} review={r} />)}
             </div>
 
             {hasMore && (
