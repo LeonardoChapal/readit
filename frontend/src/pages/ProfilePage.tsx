@@ -6,7 +6,7 @@ import BookCover from '../components/BookCover'
 import UserAvatar from '../components/UserAvatar'
 import { api, uploadAvatar } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
-import type { UserProfile } from '../types/user'
+import type { UserProfile, UserStats } from '../types/user'
 import type { Review } from '../types/review'
 import type { User } from '../types/auth'
 import type { ReadingListEntry, ReadingStatus } from '../types/reading_list'
@@ -40,6 +40,9 @@ export default function ProfilePage() {
   const LIMIT = 20
 
   const [readingList, setReadingList] = useState<ReadingListEntry[]>([])
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
 
   const [avatarBust, setAvatarBust] = useState<number | undefined>(undefined)
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -86,6 +89,38 @@ export default function ProfilePage() {
       .then(setReadingList)
       .catch(() => {})
   }, [isOwner])
+
+  useEffect(() => {
+    if (!username) return
+    api.get<UserStats>(`/api/v1/users/${username}/stats`)
+      .then(setStats)
+      .catch(() => {})
+  }, [username])
+
+  useEffect(() => {
+    if (!user || isOwner || !username) return
+    api.get<{ is_following: boolean }>(`/api/v1/users/${username}/is-following`)
+      .then(r => setIsFollowing(r.is_following))
+      .catch(() => {})
+  }, [user, username, isOwner])
+
+  async function toggleFollow() {
+    if (!username) return
+    setFollowLoading(true)
+    try {
+      if (isFollowing) {
+        await api.delete(`/api/v1/users/${username}/follow`)
+        setIsFollowing(false)
+        setProfile(p => p ? { ...p, follower_count: p.follower_count - 1 } : p)
+      } else {
+        await api.post(`/api/v1/users/${username}/follow`, {})
+        setIsFollowing(true)
+        setProfile(p => p ? { ...p, follower_count: p.follower_count + 1 } : p)
+      }
+    } finally {
+      setFollowLoading(false)
+    }
+  }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.[0]) return
@@ -215,17 +250,32 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {isOwner && !editing && (
-              <button
-                onClick={startEdit}
-                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 transition hover:border-gray-300 dark:hover:border-gray-600"
-              >
-                Editar perfil
-              </button>
-            )}
+            <div className="flex gap-2">
+              {isOwner && !editing && (
+                <button
+                  onClick={startEdit}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 transition hover:border-gray-300 dark:hover:border-gray-600"
+                >
+                  Editar perfil
+                </button>
+              )}
+              {!isOwner && user && (
+                <button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  className={`text-sm font-semibold px-4 py-1.5 rounded-lg transition disabled:opacity-50 ${
+                    isFollowing
+                      ? 'border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-red-300 hover:text-red-500'
+                      : 'bg-[#f97316] hover:bg-orange-600 text-white'
+                  }`}
+                >
+                  {isFollowing ? 'Siguiendo' : 'Seguir'}
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex gap-8 mt-6">
+          <div className="flex gap-8 mt-6 flex-wrap">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.review_count}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Reseñas</p>
@@ -234,6 +284,14 @@ export default function ProfilePage() {
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.comment_count}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comentarios</p>
             </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.follower_count}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Seguidores</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{profile.following_count}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Siguiendo</p>
+            </div>
             {isOwner && readingList.length > 0 && (
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{readingList.length}</p>
@@ -241,6 +299,27 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Estadísticas */}
+          {stats && (stats.avg_rating_given || stats.total_votes_received > 0 || stats.favorite_genre) && (
+            <div className="flex gap-4 mt-4 flex-wrap">
+              {stats.favorite_genre && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+                  Género favorito: <span className="font-semibold text-gray-700 dark:text-gray-300">{stats.favorite_genre}</span>
+                </span>
+              )}
+              {stats.avg_rating_given && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+                  Rating promedio: <span className="font-semibold text-gray-700 dark:text-gray-300">{stats.avg_rating_given} ★</span>
+                </span>
+              )}
+              {stats.total_votes_received > 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+                  Puntos recibidos: <span className="font-semibold text-[#f97316]">+{stats.total_votes_received}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

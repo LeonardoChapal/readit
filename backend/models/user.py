@@ -18,3 +18,5 @@ class User(Base):
     comments: Mapped[list["Comment"]] = relationship("Comment", back_populates="user")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="user")
     reading_list: Mapped[list["ReadingList"]] = relationship("ReadingList", back_populates="user")
+    following: Mapped[list["Follow"]] = relationship("Follow", foreign_keys="Follow.follower_id", back_populates="follower")
+    followers: Mapped[list["Follow"]] = relationship("Follow", foreign_keys="Follow.following_id", back_populates="following")

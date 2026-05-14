@@ -6,7 +6,7 @@ import ReviewCard from '../components/ReviewCard'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import StarRating from '../components/StarRating'
-import type { BookDetail } from '../types/book'
+import type { BookDetail, Book } from '../types/book'
 import type { Review } from '../types/review'
 import type { ReadingListEntry, ReadingStatus } from '../types/reading_list'
 
@@ -38,6 +38,8 @@ export default function BookPage() {
   const [notFound, setNotFound] = useState(false)
   const [sort, setSort] = useState<Sort>('top')
 
+  const [similarBooks, setSimilarBooks] = useState<Book[]>([])
+
   const [rlEntry, setRlEntry] = useState<ReadingListEntry | null>(null)
   const [rlLoading, setRlLoading] = useState(false)
   const [rlOpen, setRlOpen] = useState(false)
@@ -59,6 +61,13 @@ export default function BookPage() {
         setHasMore(r.length === LIMIT)
       })
   }, [id, sort, loading])
+
+  useEffect(() => {
+    if (!book?.genre?.id || !id) return
+    api.get<Book[]>(`/api/v1/books?genre_id=${book.genre.id}`)
+      .then(data => setSimilarBooks(data.filter(b => b.id !== Number(id)).slice(0, 6)))
+      .catch(() => {})
+  }, [book, id])
 
   useEffect(() => {
     if (!user || !id) return
@@ -299,6 +308,28 @@ export default function BookPage() {
               </div>
             )}
           </>
+        )}
+        {/* Libros similares */}
+        {similarBooks.length > 0 && (
+          <div className="mt-10">
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">
+              Más de {book.genre?.name}
+            </h2>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {similarBooks.map(b => (
+                <Link key={b.id} to={`/libro/${b.id}`} className="group flex flex-col">
+                  <BookCover
+                    bookId={b.id}
+                    title={b.title}
+                    className="w-full aspect-[2/3] rounded-lg object-cover group-hover:opacity-80 transition"
+                  />
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1.5 line-clamp-2 group-hover:text-[#f97316] transition-colors leading-tight">
+                    {b.title}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
       </main>
     </div>
