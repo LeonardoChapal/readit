@@ -25,6 +25,7 @@ def _load_review(db: Session, review_id: int) -> Review | None:
 @router.get("", response_model=list[ReviewOut])
 def list_reviews(
     genre_id: int | None = None,
+    sort: str = "top",
     skip: int = 0,
     limit: int = 20,
     db: Session = Depends(get_db),
@@ -33,9 +34,16 @@ def list_reviews(
     if genre_id is not None:
         book_ids = db.query(Book.id).filter(Book.genre_id == genre_id).subquery()
         q = q.filter(Review.book_id.in_(book_ids))
+
+    if sort == "recent":
+        q = q.order_by(Review.created_at.desc())
+    elif sort == "rating":
+        q = q.order_by(Review.rating.desc().nulls_last(), Review.created_at.desc())
+    else:
+        q = q.order_by(Review.score.desc(), Review.created_at.desc())
+
     return (
         q.options(joinedload(Review.book).joinedload(Book.genre), joinedload(Review.user))
-        .order_by(Review.score.desc(), Review.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()

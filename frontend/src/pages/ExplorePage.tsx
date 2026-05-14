@@ -15,6 +15,13 @@ function slugify(name: string): string {
 }
 
 const LIMIT = 20
+type Sort = 'top' | 'recent' | 'rating'
+
+const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  { value: 'top', label: 'Más votadas' },
+  { value: 'recent', label: 'Más recientes' },
+  { value: 'rating', label: 'Mejor valoradas' },
+]
 
 export default function ExplorePage() {
   const { genero } = useParams<{ genero?: string }>()
@@ -25,6 +32,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [sort, setSort] = useState<Sort>('top')
 
   const activeGenre = genres.find(g => slugify(g.name) === genero) ?? null
 
@@ -34,25 +42,24 @@ export default function ExplorePage() {
 
   useEffect(() => {
     setLoading(true)
+    setReviews([])
     setHasMore(true)
-    const base = activeGenre
-      ? `/api/v1/reviews?genre_id=${activeGenre.id}`
-      : '/api/v1/reviews'
-    api.get<Review[]>(`${base}&skip=0&limit=${LIMIT}`)
+    const params = new URLSearchParams({ sort, skip: '0', limit: String(LIMIT) })
+    if (activeGenre) params.set('genre_id', String(activeGenre.id))
+    api.get<Review[]>(`/api/v1/reviews?${params}`)
       .then(data => {
         setReviews(data)
         setHasMore(data.length === LIMIT)
       })
       .finally(() => setLoading(false))
-  }, [activeGenre])
+  }, [activeGenre, sort])
 
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const base = activeGenre
-        ? `/api/v1/reviews?genre_id=${activeGenre.id}`
-        : '/api/v1/reviews'
-      const data = await api.get<Review[]>(`${base}&skip=${reviews.length}&limit=${LIMIT}`)
+      const params = new URLSearchParams({ sort, skip: String(reviews.length), limit: String(LIMIT) })
+      if (activeGenre) params.set('genre_id', String(activeGenre.id))
+      const data = await api.get<Review[]>(`/api/v1/reviews?${params}`)
       setReviews(prev => [...prev, ...data])
       setHasMore(data.length === LIMIT)
     } finally {
@@ -73,6 +80,24 @@ export default function ExplorePage() {
         <div className="max-w-4xl mx-auto px-4 py-5">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Explorar por género</h1>
 
+          {/* Selector sort */}
+          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 gap-1 mb-4 w-fit">
+            {SORT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSort(opt.value)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                  sort === opt.value
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filtros de género */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => selectGenre(null)}

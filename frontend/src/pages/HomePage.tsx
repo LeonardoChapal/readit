@@ -7,6 +7,13 @@ import { useAuth } from '../hooks/useAuth'
 import type { Review } from '../types/review'
 
 const LIMIT = 20
+type Sort = 'top' | 'recent' | 'rating'
+
+const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  { value: 'top', label: 'Más votadas' },
+  { value: 'recent', label: 'Más recientes' },
+  { value: 'rating', label: 'Mejor valoradas' },
+]
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -14,20 +21,23 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
+  const [sort, setSort] = useState<Sort>('top')
 
   useEffect(() => {
-    api.get<Review[]>(`/api/v1/reviews?skip=0&limit=${LIMIT}`)
+    setLoading(true)
+    setReviews([])
+    api.get<Review[]>(`/api/v1/reviews?sort=${sort}&skip=0&limit=${LIMIT}`)
       .then(data => {
         setReviews(data)
         setHasMore(data.length === LIMIT)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [sort])
 
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const data = await api.get<Review[]>(`/api/v1/reviews?skip=${reviews.length}&limit=${LIMIT}`)
+      const data = await api.get<Review[]>(`/api/v1/reviews?sort=${sort}&skip=${reviews.length}&limit=${LIMIT}`)
       setReviews(prev => [...prev, ...data])
       setHasMore(data.length === LIMIT)
     } finally {
@@ -103,10 +113,26 @@ export default function HomePage() {
 
       {/* Feed */}
       <main className="max-w-4xl mx-auto px-4 py-10 -mt-px">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Reseñas recientes</h2>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          {/* Selector sort */}
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
+            {SORT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSort(opt.value)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                  sort === opt.value
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <Link to="/explorar" className="text-sm text-[#f97316] hover:underline font-medium">
-            Ver por género →
+            Por género →
           </Link>
         </div>
 
