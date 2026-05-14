@@ -22,6 +22,11 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [sort, setSort] = useState<Sort>('top')
+  const [trending, setTrending] = useState<Review[]>([])
+
+  useEffect(() => {
+    api.get<Review[]>('/api/v1/reviews/trending?limit=3').then(setTrending).catch(() => {})
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -111,8 +116,48 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Trending semanal */}
+      {trending.length > 0 && (
+        <section className="max-w-4xl mx-auto px-4 pt-10 -mt-px">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">🔥</span>
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Trending esta semana</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            {trending.map((review, i) => (
+              <Link
+                key={review.id}
+                to={`/resena/${review.id}`}
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-black text-gray-100 dark:text-gray-700 select-none">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                      {review.book.title}
+                    </p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-2 group-hover:text-[#f97316]">
+                      {review.title}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                  {review.content}
+                </p>
+                <div className="flex items-center justify-between mt-auto pt-1">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{review.user.username}</span>
+                  <span className="text-xs font-bold text-[#f97316]">+{review.score} pts</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Feed */}
-      <main className="max-w-4xl mx-auto px-4 py-10 -mt-px">
+      <main className={`max-w-4xl mx-auto px-4 pb-10 ${trending.length === 0 ? 'pt-10 -mt-px' : 'pt-0'}`}>
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           {/* Selector sort */}
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">

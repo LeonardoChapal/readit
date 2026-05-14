@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
@@ -45,6 +47,19 @@ def list_reviews(
     return (
         q.options(joinedload(Review.book).joinedload(Book.genre), joinedload(Review.user))
         .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+@router.get("/trending", response_model=list[ReviewOut])
+def trending_reviews(limit: int = 5, db: Session = Depends(get_db)):
+    since = datetime.now(timezone.utc) - timedelta(days=7)
+    return (
+        db.query(Review)
+        .options(joinedload(Review.book).joinedload(Book.genre), joinedload(Review.user))
+        .filter(Review.status == "active", Review.created_at >= since)
+        .order_by(Review.score.desc(), Review.rating.desc().nulls_last())
         .limit(limit)
         .all()
     )
