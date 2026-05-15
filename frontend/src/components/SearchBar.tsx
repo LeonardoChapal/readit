@@ -8,19 +8,19 @@ export default function SearchBar() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResults>({ books: [], reviews: [] })
+  const [results, setResults] = useState<SearchResults>({ books: [], reviews: [], users: [] })
   const [busy, setBusy] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const q = query.trim()
-    if (q.length < 2) { setResults({ books: [], reviews: [] }); return }
+    if (q.length < 2) { setResults({ books: [], reviews: [], users: [] }); return }
     const timer = setTimeout(async () => {
       setBusy(true)
       try {
         const res = await api.get<SearchResults>(`/api/v1/search?q=${encodeURIComponent(q)}`)
-        setResults({ books: res.books.slice(0, 3), reviews: res.reviews.slice(0, 3) })
+        setResults({ books: res.books.slice(0, 3), reviews: res.reviews.slice(0, 3), users: res.users?.slice(0, 3) ?? [] })
       } finally {
         setBusy(false)
       }
@@ -41,7 +41,7 @@ export default function SearchBar() {
   function close() {
     setOpen(false)
     setQuery('')
-    setResults({ books: [], reviews: [] })
+    setResults({ books: [], reviews: [], users: [] })
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

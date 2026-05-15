@@ -13,7 +13,7 @@ export default function SearchPage() {
   const [searchParams] = useSearchParams()
   const q = searchParams.get('q') ?? ''
 
-  const [results, setResults] = useState<SearchResults>({ books: [], reviews: [] })
+  const [results, setResults] = useState<SearchResults>({ books: [], reviews: [], users: [] })
   const [genres, setGenres] = useState<Genre[]>([])
   const [genreId, setGenreId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -23,7 +23,7 @@ export default function SearchPage() {
   }, [])
 
   useEffect(() => {
-    if (q.trim().length < 2) { setResults({ books: [], reviews: [] }); return }
+    if (q.trim().length < 2) { setResults({ books: [], reviews: [], users: [] }); return }
     setLoading(true)
     const url = `/api/v1/search?q=${encodeURIComponent(q.trim())}${genreId ? `&genre_id=${genreId}` : ''}`
     api.get<SearchResults>(url)
