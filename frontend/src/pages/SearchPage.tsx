@@ -31,7 +31,7 @@ export default function SearchPage() {
       .finally(() => setLoading(false))
   }, [q, genreId])
 
-  const total = results.books.length + results.reviews.length
+  const total = results.books.length + results.reviews.length + (results.users?.length ?? 0)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -108,6 +108,34 @@ export default function SearchPage() {
                       <span className="inline-block mt-1.5 text-xs bg-orange-50 dark:bg-orange-900/30 text-[#f97316] px-2 py-0.5 rounded-full border border-orange-100 dark:border-orange-800">
                         {b.genre.name}
                       </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Sección usuarios */}
+        {!loading && results.users?.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+              Usuarios ({results.users.length})
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {results.users.map(u => (
+                <Link
+                  key={u.username}
+                  to={`/usuario/${u.username}`}
+                  className="flex items-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 hover:border-[#f97316] hover:shadow-sm transition"
+                >
+                  <UserAvatar username={u.username} className="w-8 h-8" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <Highlight text={u.username} query={q} />
+                    </p>
+                    {u.role === 'admin' && (
+                      <span className="text-[10px] text-[#f97316] font-medium">Admin</span>
                     )}
                   </div>
                 </Link>

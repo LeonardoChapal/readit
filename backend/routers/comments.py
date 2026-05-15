@@ -6,6 +6,7 @@ from database import get_db
 from models.comment import Comment
 from models.review import Review
 from models.user import User
+from models.notification import Notification
 from schemas.comment import CommentCreate, CommentOut
 from auth import get_current_user
 
@@ -58,6 +59,12 @@ def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if review and review.user_id != current_user.id:
+        db.add(Notification(user_id=review.user_id, actor_id=current_user.id, type="comment", review_id=review_id))
+        db.commit()
+
     return (
         db.query(Comment)
         .options(joinedload(Comment.user))

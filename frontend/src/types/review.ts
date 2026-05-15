@@ -22,4 +22,15 @@ export interface ReviewCreate {
 export interface SearchResults {
   books: import('./book').Book[]
   reviews: Review[]
+  users: { username: string; role: string }[]
+}
+
+export interface Notification {
+  id: number
+  type: 'comment' | 'vote' | 'follow'
+  read: boolean
+  created_at: string
+  actor_username: string
+  review_id: number | null
+  review_title: string | null
 }

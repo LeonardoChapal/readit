@@ -8,6 +8,7 @@ import type { Review } from '../types/review'
 
 const LIMIT = 20
 type Sort = 'top' | 'recent' | 'rating'
+type FeedTab = 'global' | 'following'
 
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'top', label: 'Más votadas' },
@@ -22,6 +23,7 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [sort, setSort] = useState<Sort>('top')
+  const [feedTab, setFeedTab] = useState<FeedTab>('global')
   const [trending, setTrending] = useState<Review[]>([])
 
   useEffect(() => {
@@ -31,18 +33,24 @@ export default function HomePage() {
   useEffect(() => {
     setLoading(true)
     setReviews([])
-    api.get<Review[]>(`/api/v1/reviews?sort=${sort}&skip=0&limit=${LIMIT}`)
+    const url = feedTab === 'following'
+      ? `/api/v1/feed?skip=0&limit=${LIMIT}`
+      : `/api/v1/reviews?sort=${sort}&skip=0&limit=${LIMIT}`
+    api.get<Review[]>(url)
       .then(data => {
         setReviews(data)
         setHasMore(data.length === LIMIT)
       })
       .finally(() => setLoading(false))
-  }, [sort])
+  }, [sort, feedTab])
 
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const data = await api.get<Review[]>(`/api/v1/reviews?sort=${sort}&skip=${reviews.length}&limit=${LIMIT}`)
+      const url = feedTab === 'following'
+        ? `/api/v1/feed?skip=${reviews.length}&limit=${LIMIT}`
+        : `/api/v1/reviews?sort=${sort}&skip=${reviews.length}&limit=${LIMIT}`
+      const data = await api.get<Review[]>(url)
       setReviews(prev => [...prev, ...data])
       setHasMore(data.length === LIMIT)
     } finally {
@@ -158,25 +166,44 @@ export default function HomePage() {
 
       {/* Feed */}
       <main className={`max-w-4xl mx-auto px-4 pb-10 ${trending.length === 0 ? 'pt-10 -mt-px' : 'pt-0'}`}>
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          {/* Selector sort */}
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
-            {SORT_OPTIONS.map(opt => (
+        {/* Tabs feed */}
+        {user && (
+          <div className="flex gap-0 border-b border-gray-200 dark:border-gray-700 mb-6 -mt-2">
+            {([['global', 'Para todos'], ['following', 'Siguiendo']] as [FeedTab, string][]).map(([value, label]) => (
               <button
-                key={opt.value}
-                onClick={() => setSort(opt.value)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                  sort === opt.value
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                key={value}
+                onClick={() => setFeedTab(value)}
+                className={`px-4 py-2 text-sm font-semibold border-b-2 transition ${
+                  feedTab === value
+                    ? 'border-[#f97316] text-[#f97316]'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
-                {opt.label}
+                {label}
               </button>
             ))}
           </div>
+        )}
 
-          <Link to="/explorar" className="text-sm text-[#f97316] hover:underline font-medium">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          {/* Selector sort */}
+          {feedTab === 'global' && <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
+              {SORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSort(opt.value)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                    sort === opt.value
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>}
+
+          <Link to="/explorar" className="text-sm text-[#f97316] hover:underline font-medium ml-auto">
             Por género →
           </Link>
         </div>

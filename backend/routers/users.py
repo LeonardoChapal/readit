@@ -10,6 +10,7 @@ from models.genre import Genre
 from models.review import Review
 from models.comment import Comment
 from models.follow import Follow
+from models.notification import Notification
 from schemas.review import ReviewOut
 from schemas.user import UserOut, UserUpdate
 from auth import get_current_user, hash_password, verify_password
@@ -170,6 +171,7 @@ def follow_user(
     ).first()
     if not exists:
         db.add(Follow(follower_id=current_user.id, following_id=target.id))
+        db.add(Notification(user_id=target.id, actor_id=current_user.id, type="follow"))
         db.commit()
 
 

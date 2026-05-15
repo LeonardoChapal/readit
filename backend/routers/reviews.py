@@ -8,6 +8,7 @@ from models.review import Review
 from models.book import Book
 from models.vote import Vote
 from models.user import User
+from models.notification import Notification
 from schemas.review import ReviewCreate, ReviewUpdate, ReviewOut
 from schemas.vote import VoteCreate, VoteResult
 from auth import get_current_user
@@ -119,6 +120,11 @@ def vote_review(
 
     db.commit()
     db.refresh(review)
+
+    if user_vote == 1 and review.user_id != current_user.id:
+        db.add(Notification(user_id=review.user_id, actor_id=current_user.id, type="vote", review_id=review_id))
+        db.commit()
+
     return VoteResult(score=review.score, user_vote=user_vote)
 
 
