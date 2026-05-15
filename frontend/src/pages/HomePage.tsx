@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ReviewCard from '../components/ReviewCard'
+import BookCover from '../components/BookCover'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import type { Review } from '../types/review'
+import type { Recommendation } from '../types/recommendation'
 
 const LIMIT = 20
 type Sort = 'top' | 'recent' | 'rating'
@@ -13,7 +15,7 @@ type FeedTab = 'global' | 'following'
 const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'top', label: 'Más votadas' },
   { value: 'recent', label: 'Más recientes' },
-  { value: 'rating', label: 'Mejor valoradas' },
+  { value: 'rating', label: 'Mayor calificación ★' },
 ]
 
 export default function HomePage() {
@@ -25,10 +27,16 @@ export default function HomePage() {
   const [sort, setSort] = useState<Sort>('top')
   const [feedTab, setFeedTab] = useState<FeedTab>('global')
   const [trending, setTrending] = useState<Review[]>([])
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
 
   useEffect(() => {
     api.get<Review[]>('/api/v1/reviews/trending?limit=3').then(setTrending).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!user?.onboarding_completed) return
+    api.get<Recommendation[]>('/api/v1/recommendations?limit=6').then(setRecommendations).catch(() => {})
+  }, [user])
 
   useEffect(() => {
     setLoading(true)
@@ -64,7 +72,6 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="hero-animated relative overflow-hidden">
-        {/* Decorativos */}
         <div className="absolute top-8 right-16 opacity-10 float">
           <svg width="90" height="120" viewBox="0 0 90 120" fill="white">
             <rect x="5" y="5" width="80" height="110" rx="4" />
@@ -123,6 +130,47 @@ export default function HomePage() {
           </svg>
         </div>
       </section>
+
+      {/* Onboarding CTA para usuarios sin completar */}
+      {user && !user.onboarding_completed && (
+        <section className="max-w-4xl mx-auto px-4 pt-10 -mt-px">
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border border-orange-200 dark:border-orange-800 rounded-xl p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Personaliza tus recomendaciones</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Dinos qué géneros te gustan y recibirás libros adaptados a ti.</p>
+            </div>
+            <Link to="/onboarding" className="bg-[#f97316] hover:bg-[#ea6c0a] text-white text-xs font-bold px-4 py-2 rounded-full transition whitespace-nowrap">
+              Configurar
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Recomendaciones personalizadas */}
+      {recommendations.length > 0 && (
+        <section className="max-w-4xl mx-auto px-4 pt-10 -mt-px">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">✨</span>
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Para ti</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-10">
+            {recommendations.map(rec => (
+              <Link
+                key={rec.id}
+                to={`/libro/${rec.book.id}`}
+                onClick={() => api.post(`/api/v1/recommendations/${rec.id}/click`, {}).catch(() => {})}
+                className="flex flex-col gap-2 group"
+              >
+                <BookCover bookId={rec.book.id} title={rec.book.title} className="w-full aspect-[2/3] rounded-lg object-cover shadow-sm group-hover:shadow-md transition" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 group-hover:text-[#f97316] transition">{rec.book.title}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{rec.book.author}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Trending semanal */}
       {trending.length > 0 && (
@@ -186,22 +234,21 @@ export default function HomePage() {
         )}
 
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          {/* Selector sort */}
           {feedTab === 'global' && <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
-              {SORT_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSort(opt.value)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                    sort === opt.value
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>}
+            {SORT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSort(opt.value)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                  sort === opt.value
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>}
 
           <Link to="/explorar" className="text-sm text-[#f97316] hover:underline font-medium ml-auto">
             Por género →

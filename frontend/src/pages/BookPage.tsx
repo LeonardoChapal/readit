@@ -5,6 +5,7 @@ import BookCover from '../components/BookCover'
 import ReviewCard from '../components/ReviewCard'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import { useActivity } from '../hooks/useActivity'
 import StarRating from '../components/StarRating'
 import type { BookDetail, Book } from '../types/book'
 import type { Review } from '../types/review'
@@ -29,6 +30,7 @@ export default function BookPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { track } = useActivity()
 
   const [book, setBook] = useState<BookDetail | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
@@ -48,7 +50,10 @@ export default function BookPage() {
     if (!id) return
     setLoading(true)
     api.get<BookDetail>(`/api/v1/books/${id}`)
-      .then(b => setBook(b as BookDetail))
+      .then(b => {
+        setBook(b as BookDetail)
+        track({ activity_type: 'view_book', entity_type: 'book', entity_id: Number(id) })
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
@@ -169,6 +174,16 @@ export default function BookPage() {
                 <span className="text-xs text-gray-400 dark:text-gray-500">{book.year}</span>
               )}
             </div>
+
+            {book.tags && book.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {book.tags.map(tag => (
+                  <span key={tag.id} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-600">
+                    #{tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {book.avg_rating && (
               <div className="flex items-center gap-2 mt-3">

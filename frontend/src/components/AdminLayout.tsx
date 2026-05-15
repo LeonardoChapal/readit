@@ -2,12 +2,13 @@ import { NavLink, Outlet, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 const NAV = [
-  { to: '/admin',            label: 'Dashboard',    end: true },
-  { to: '/admin/usuarios',   label: 'Usuarios' },
-  { to: '/admin/libros',     label: 'Libros' },
-  { to: '/admin/resenas',    label: 'Reseñas' },
-  { to: '/admin/comentarios',label: 'Comentarios' },
-  { to: '/admin/generos',    label: 'Géneros' },
+  { to: '/admin',             label: 'Dashboard',   end: true },
+  { to: '/admin/usuarios',    label: 'Usuarios' },
+  { to: '/admin/libros',      label: 'Libros' },
+  { to: '/admin/resenas',     label: 'Reseñas' },
+  { to: '/admin/comentarios', label: 'Comentarios' },
+  { to: '/admin/generos',     label: 'Géneros' },
+  { to: '/admin/etiquetas',   label: 'Etiquetas' },
 ]
 
 export default function AdminLayout() {

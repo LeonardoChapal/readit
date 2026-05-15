@@ -20,6 +20,10 @@ from routers import search as search_router
 from routers import reading_list as reading_list_router
 from routers import notifications as notifications_router
 from routers import feed as feed_router
+from routers import tags as tags_router
+from routers import onboarding as onboarding_router
+from routers import activity as activity_router
+from routers import recommendations as recommendations_router
 
 
 @asynccontextmanager
@@ -52,6 +56,10 @@ app.include_router(search_router.router)
 app.include_router(reading_list_router.router)
 app.include_router(notifications_router.router)
 app.include_router(feed_router.router)
+app.include_router(tags_router.router)
+app.include_router(onboarding_router.router)
+app.include_router(activity_router.router)
+app.include_router(recommendations_router.router)
 
 
 @app.get("/")

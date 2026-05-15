@@ -5,6 +5,7 @@ import AdminLayout from './components/AdminLayout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import OnboardingPage from './pages/OnboardingPage'
 import CreateReviewPage from './pages/CreateReviewPage'
 import ReviewDetailPage from './pages/ReviewDetailPage'
 import ExplorePage from './pages/ExplorePage'
@@ -18,6 +19,7 @@ import BooksPage from './pages/admin/BooksPage'
 import ReviewsPage from './pages/admin/ReviewsPage'
 import CommentsPage from './pages/admin/CommentsPage'
 import GenresPage from './pages/admin/GenresPage'
+import TagsPage from './pages/admin/TagsPage'
 
 export default function App() {
   return (
@@ -27,6 +29,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegisterPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/nueva-resena" element={<CreateReviewPage />} />
           <Route path="/resena/:id" element={<ReviewDetailPage />} />
           <Route path="/explorar" element={<ExplorePage />} />
@@ -44,6 +47,7 @@ export default function App() {
             <Route path="resenas" element={<ReviewsPage />} />
             <Route path="comentarios" element={<CommentsPage />} />
             <Route path="generos" element={<GenresPage />} />
+            <Route path="etiquetas" element={<TagsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

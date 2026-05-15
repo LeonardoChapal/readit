@@ -3,6 +3,8 @@ export interface User {
   username: string
   email: string
   role: string
+  onboarding_completed: boolean
+  preferred_language: string | null
   created_at: string
 }
 

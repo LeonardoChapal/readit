@@ -9,6 +9,13 @@ class BookCreate(BaseModel):
     genre_id: int | None = None
 
 
+class TagSimple(BaseModel):
+    id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class BookOut(BaseModel):
     id: int
     title: str
@@ -22,3 +29,4 @@ class BookOut(BaseModel):
 class BookDetail(BookOut):
     avg_rating: float | None = None
     rating_count: int = 0
+    tags: list[TagSimple] = []

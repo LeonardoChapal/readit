@@ -5,9 +5,10 @@ from sqlalchemy import func
 
 from database import get_db
 from models.book import Book
+from models.tag import BookTag
 from models.review import Review
 from models.user import User
-from schemas.book import BookCreate, BookOut, BookDetail
+from schemas.book import BookCreate, BookOut, BookDetail, TagSimple
 from schemas.review import ReviewOut
 from auth import get_current_user
 
@@ -46,9 +47,13 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
     avg_rating = round(float(agg[0]), 1) if agg[0] else None
     rating_count = agg[1] or 0
 
+    book_tags = db.query(BookTag).options(joinedload(BookTag.tag)).filter(BookTag.book_id == book_id).all()
+    tags = [TagSimple(id=bt.tag.id, name=bt.tag.name) for bt in book_tags]
+
     result = BookDetail.model_validate(book)
     result.avg_rating = avg_rating
     result.rating_count = rating_count
+    result.tags = tags
     return result
 
 

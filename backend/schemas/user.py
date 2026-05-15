@@ -18,6 +18,8 @@ class UserOut(BaseModel):
     username: str
     email: str
     role: str
+    onboarding_completed: bool = False
+    preferred_language: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

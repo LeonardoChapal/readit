@@ -15,3 +15,4 @@ class Book(Base):
 
     genre: Mapped["Genre"] = relationship("Genre", back_populates="books")
     reviews: Mapped[list["Review"]] = relationship("Review", back_populates="book")
+    tags: Mapped[list["BookTag"]] = relationship("BookTag", back_populates="book")
