@@ -10,9 +10,7 @@ export default function GenresPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get<Genre[]>('/api/v1/genres')
-      .then(setGenres)
-      .finally(() => setLoading(false))
+    api.get<Genre[]>('/api/v1/genres').then(setGenres).finally(() => setLoading(false))
   }, [])
 
   async function addGenre() {
@@ -39,7 +37,7 @@ export default function GenresPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Géneros</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Géneros</h1>
 
       <div className="flex gap-2 mb-6">
         <input
@@ -48,7 +46,7 @@ export default function GenresPage() {
           onChange={e => setNewName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addGenre()}
           placeholder="Nuevo género..."
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+          className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]"
         />
         <button
           onClick={addGenre}
@@ -58,7 +56,7 @@ export default function GenresPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
         {genres.map(g => (
           <div key={g.id} className="flex items-center gap-3 px-4 py-3">
             {editId === g.id ? (
@@ -68,26 +66,16 @@ export default function GenresPage() {
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && saveEdit(g.id)}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+                  className="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]"
                 />
                 <button onClick={() => saveEdit(g.id)} className="text-xs text-[#f97316] font-medium hover:underline">Guardar</button>
-                <button onClick={() => setEditId(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancelar</button>
+                <button onClick={() => setEditId(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Cancelar</button>
               </>
             ) : (
               <>
-                <span className="flex-1 text-sm text-gray-800">{g.name}</span>
-                <button
-                  onClick={() => { setEditId(g.id); setEditName(g.name) }}
-                  className="text-xs text-gray-400 hover:text-gray-700 transition"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => deleteGenre(g.id)}
-                  className="text-xs text-red-400 hover:text-red-600 transition"
-                >
-                  Eliminar
-                </button>
+                <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">{g.name}</span>
+                <button onClick={() => { setEditId(g.id); setEditName(g.name) }} className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">Editar</button>
+                <button onClick={() => deleteGenre(g.id)} className="text-xs text-red-400 hover:text-red-600 transition">Eliminar</button>
               </>
             )}
           </div>
