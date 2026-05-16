@@ -29,6 +29,7 @@ export default function OnboardingPage() {
   const [selectedBooks, setSelectedBooks] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'genres' | 'books'>('genres')
+  const [booksForStep2, setBooksForStep2] = useState<BookOption[]>([])
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -79,13 +80,17 @@ export default function OnboardingPage() {
     refreshUser().finally(() => navigate('/'))
   }
 
-  const sortedBooks = [...options.books].sort((a, b) => {
-    const aMatch = a.genre_id !== null && selectedGenres.has(a.genre_id)
-    const bMatch = b.genre_id !== null && selectedGenres.has(b.genre_id)
-    if (aMatch && !bMatch) return -1
-    if (!aMatch && bMatch) return 1
-    return 0
-  })
+  function goToBooks() {
+    const sorted = [...options.books].sort((a, b) => {
+      const aMatch = a.genre_id != null && selectedGenres.has(a.genre_id)
+      const bMatch = b.genre_id != null && selectedGenres.has(b.genre_id)
+      if (aMatch && !bMatch) return -1
+      if (!aMatch && bMatch) return 1
+      return 0
+    })
+    setBooksForStep2(sorted)
+    setStep('books')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-4 py-12">
@@ -103,7 +108,7 @@ export default function OnboardingPage() {
               className={`h-1.5 w-16 rounded-full transition-colors ${step === 'genres' ? 'bg-[#f97316]' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             />
             <button
-              onClick={() => selectedGenres.size > 0 && setStep('books')}
+              onClick={() => selectedGenres.size > 0 && goToBooks()}
               className={`h-1.5 w-16 rounded-full transition-colors ${step === 'books' ? 'bg-[#f97316]' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             />
           </div>
@@ -154,7 +159,7 @@ export default function OnboardingPage() {
                   Omitir por ahora
                 </button>
                 <button
-                  onClick={() => setStep('books')}
+                  onClick={goToBooks}
                   disabled={selectedGenres.size === 0}
                   className="bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold px-6 py-2.5 rounded-full transition disabled:opacity-50"
                 >
@@ -177,11 +182,11 @@ export default function OnboardingPage() {
                 </span>
               </div>
 
-              {options.books.length === 0 ? (
+              {booksForStep2.length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">No hay libros disponibles aún.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4 max-h-72 overflow-y-auto pr-1">
-                  {sortedBooks.map(b => {
+                  {booksForStep2.map(b => {
                     const selected = selectedBooks.has(b.id)
                     const limitReached = !selected && selectedBooks.size >= MAX_BOOKS
                     return (
