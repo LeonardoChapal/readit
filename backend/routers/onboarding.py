@@ -68,8 +68,8 @@ def complete_onboarding(
             if book.genre_id:
                 key = ("genre", book.genre_id)
                 if key in interests:
-                    w, src = interests[key]
-                    interests[key] = (min(w + 0.1, 3.0), src)
+                    # Ya está como onboarding (peso 1.0); no incrementar para no violar chk_ui_weight
+                    pass
                 else:
                     interests[key] = (0.1, "inferred")
 
@@ -81,7 +81,7 @@ def complete_onboarding(
                 UserInterest.entity_id == eid,
             ).first()
             if existing:
-                existing.weight = min(float(existing.weight) + 0.1, 3.0)
+                existing.weight = min(float(existing.weight) + 0.1, 1.0)
             else:
                 db.add(UserInterest(
                     user_id=current_user.id,

@@ -26,7 +26,7 @@ def _update_genre_interest(db: Session, user_id: int, book: Book, delta: float =
         UserInterest.entity_id == book.genre_id,
     ).first()
     if existing:
-        existing.weight = min(float(existing.weight) + delta, 3.0)
+        existing.weight = min(float(existing.weight) + delta, 1.0)
     else:
         db.add(UserInterest(
             user_id=user_id,
