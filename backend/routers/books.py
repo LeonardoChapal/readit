@@ -57,6 +57,35 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
     return result
 
 
+@router.get("/{book_id}/related", response_model=list[BookOut])
+def get_related_books(book_id: int, limit: int = 6, db: Session = Depends(get_db)):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+
+    own_tag_ids = {bt.tag_id for bt in db.query(BookTag).filter(BookTag.book_id == book_id).all()}
+
+    # Candidatos: libros con al menos una etiqueta compartida o del mismo género
+    candidates = (
+        db.query(Book)
+        .options(joinedload(Book.genre), joinedload(Book.tags))
+        .filter(Book.id != book_id)
+        .all()
+    )
+
+    scored: list[tuple[int, Book]] = []
+    for b in candidates:
+        b_tag_ids = {bt.tag_id for bt in b.tags}
+        shared_tags = len(own_tag_ids & b_tag_ids)
+        same_genre = 1 if book.genre_id and b.genre_id == book.genre_id else 0
+        score = shared_tags * 2 + same_genre
+        if score > 0:
+            scored.append((score, b))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [b for _, b in scored[:limit]]
+
+
 @router.get("/{book_id}/reviews", response_model=list[ReviewOut])
 def get_book_reviews(book_id: int, sort: str = "top", skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
     if not db.query(Book).filter(Book.id == book_id).first():

@@ -68,11 +68,11 @@ export default function BookPage() {
   }, [id, sort, loading])
 
   useEffect(() => {
-    if (!book?.genre?.id || !id) return
-    api.get<Book[]>(`/api/v1/books?genre_id=${book.genre.id}`)
-      .then(data => setSimilarBooks(data.filter(b => b.id !== Number(id)).slice(0, 6)))
+    if (!id || loading) return
+    api.get<Book[]>(`/api/v1/books/${id}/related?limit=6`)
+      .then(setSimilarBooks)
       .catch(() => {})
-  }, [book, id])
+  }, [id, loading])
 
   useEffect(() => {
     if (!user || !id) return
@@ -331,23 +331,30 @@ export default function BookPage() {
             )}
           </>
         )}
-        {/* Libros similares */}
+        {/* Libros relacionados */}
         {similarBooks.length > 0 && (
-          <div className="mt-10">
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 mb-4">
-              Más de {book.genre?.name}
-            </h2>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">📚</span>
+              <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">
+                Si te gustó esto, también te puede gustar
+              </h2>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
+              Basado en etiquetas y género compartidos
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
               {similarBooks.map(b => (
-                <Link key={b.id} to={`/libro/${b.id}`} className="group flex flex-col">
+                <Link key={b.id} to={`/libro/${b.id}`} className="group flex flex-col gap-1.5">
                   <BookCover
                     bookId={b.id}
                     title={b.title}
-                    className="w-full aspect-[2/3] rounded-lg object-cover group-hover:opacity-80 transition"
+                    className="w-full aspect-[2/3] rounded-lg object-cover shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all duration-200"
                   />
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1.5 line-clamp-2 group-hover:text-[#f97316] transition-colors leading-tight">
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 line-clamp-2 group-hover:text-[#f97316] transition-colors leading-tight">
                     {b.title}
                   </p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{b.author}</p>
                 </Link>
               ))}
             </div>
