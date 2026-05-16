@@ -2,23 +2,29 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import BookCover from '../components/BookCover'
 import type { Genre } from '../types/book'
-import type { Tag } from '../types/recommendation'
+
+interface BookOption {
+  id: number
+  title: string
+  author: string
+}
 
 interface OnboardingOptions {
   genres: Genre[]
-  tags: Tag[]
+  books: BookOption[]
 }
 
 export default function OnboardingPage() {
   const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
 
-  const [options, setOptions] = useState<OnboardingOptions>({ genres: [], tags: [] })
+  const [options, setOptions] = useState<OnboardingOptions>({ genres: [], books: [] })
   const [selectedGenres, setSelectedGenres] = useState<Set<number>>(new Set())
-  const [selectedTags, setSelectedTags] = useState<Set<number>>(new Set())
+  const [selectedBooks, setSelectedBooks] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<'genres' | 'tags'>('genres')
+  const [step, setStep] = useState<'genres' | 'books'>('genres')
 
   useEffect(() => {
     if (!user) { navigate('/login'); return }
@@ -34,8 +40,8 @@ export default function OnboardingPage() {
     })
   }
 
-  function toggleTag(id: number) {
-    setSelectedTags(prev => {
+  function toggleBook(id: number) {
+    setSelectedBooks(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
@@ -48,7 +54,7 @@ export default function OnboardingPage() {
     try {
       await api.post('/api/v1/onboarding/complete', {
         genre_ids: Array.from(selectedGenres),
-        tag_ids: Array.from(selectedTags),
+        book_ids: Array.from(selectedBooks),
       })
       await refreshUser()
       navigate('/')
@@ -58,7 +64,7 @@ export default function OnboardingPage() {
   }
 
   function skip() {
-    api.post('/api/v1/onboarding/complete', { genre_ids: [], tag_ids: [] }).catch(() => {})
+    api.post('/api/v1/onboarding/complete', { genre_ids: [], book_ids: [] }).catch(() => {})
     refreshUser().finally(() => navigate('/'))
   }
 
@@ -70,11 +76,17 @@ export default function OnboardingPage() {
           <p className="text-gray-500 dark:text-gray-400">
             {step === 'genres'
               ? 'Selecciona los géneros que más te gustan para personalizar tu experiencia'
-              : 'Elige etiquetas temáticas para afinar aún más tus recomendaciones'}
+              : '¿Cuáles de estos libros has leído?'}
           </p>
           <div className="flex items-center justify-center gap-2 mt-4">
-            <div className="h-1.5 w-16 rounded-full bg-[#f97316]" />
-            <div className={`h-1.5 w-16 rounded-full transition-colors ${step === 'tags' ? 'bg-[#f97316]' : 'bg-gray-200 dark:bg-gray-700'}`} />
+            <button
+              onClick={() => setStep('genres')}
+              className={`h-1.5 w-16 rounded-full transition-colors ${step === 'genres' ? 'bg-[#f97316]' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            />
+            <button
+              onClick={() => selectedGenres.size > 0 && setStep('books')}
+              className={`h-1.5 w-16 rounded-full transition-colors ${step === 'books' ? 'bg-[#f97316]' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            />
           </div>
         </div>
 
@@ -104,39 +116,65 @@ export default function OnboardingPage() {
                   Omitir por ahora
                 </button>
                 <button
-                  onClick={() => options.tags.length > 0 ? setStep('tags') : handleComplete()}
+                  onClick={() => setStep('books')}
                   disabled={selectedGenres.size === 0}
                   className="bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold px-6 py-2.5 rounded-full transition disabled:opacity-50"
                 >
-                  {options.tags.length > 0 ? 'Siguiente →' : 'Empezar'}
+                  Siguiente →
                 </button>
               </div>
             </>
           ) : (
             <>
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-                Etiquetas ({selectedTags.size} seleccionadas) — opcional
-              </h2>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {options.tags.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => toggleTag(t.id)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition border ${
-                      selectedTags.has(t.id)
-                        ? 'bg-[#f97316] text-white border-[#f97316]'
-                        : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-[#f97316] hover:text-[#f97316]'
-                    }`}
-                  >
-                    {t.name}
-                  </button>
-                ))}
-                {options.tags.length === 0 && (
-                  <p className="text-sm text-gray-400 dark:text-gray-500">No hay etiquetas disponibles aún.</p>
-                )}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Libros leídos{selectedBooks.size > 0 ? ` (${selectedBooks.size})` : ''} — opcional
+                </h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Ayuda a afinar tus recomendaciones</p>
               </div>
+
+              {options.books.length === 0 ? (
+                <p className="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">No hay libros disponibles aún.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-6 max-h-72 overflow-y-auto pr-1">
+                  {options.books.map(b => {
+                    const selected = selectedBooks.has(b.id)
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => toggleBook(b.id)}
+                        className="flex flex-col items-center gap-1.5 group text-left"
+                      >
+                        <div className={`relative w-full rounded-lg overflow-hidden ring-2 transition-all ${
+                          selected ? 'ring-[#f97316] scale-95' : 'ring-transparent hover:ring-orange-200 dark:hover:ring-orange-800'
+                        }`}>
+                          <BookCover bookId={b.id} title={b.title} className="w-full aspect-[2/3] object-cover" />
+                          {selected && (
+                            <div className="absolute inset-0 bg-[#f97316]/30 flex items-center justify-center">
+                              <div className="bg-[#f97316] rounded-full p-1">
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <p className={`text-xs text-center line-clamp-2 leading-tight transition-colors ${
+                          selected ? 'text-[#f97316] font-medium' : 'text-gray-700 dark:text-gray-300 group-hover:text-[#f97316]'
+                        }`}>
+                          {b.title}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
               <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-                <button onClick={() => setStep('genres')} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                <button
+                  onClick={() => setStep('genres')}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+                >
                   ← Volver
                 </button>
                 <button
@@ -144,7 +182,7 @@ export default function OnboardingPage() {
                   disabled={loading}
                   className="bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold px-6 py-2.5 rounded-full transition disabled:opacity-50"
                 >
-                  {loading ? 'Guardando...' : 'Empezar a leer'}
+                  {loading ? 'Guardando...' : selectedBooks.size > 0 ? `Empezar (${selectedBooks.size} leídos)` : 'Empezar →'}
                 </button>
               </div>
             </>

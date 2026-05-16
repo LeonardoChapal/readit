@@ -20,6 +20,7 @@ class OnboardingOptions(BaseModel):
 class OnboardingComplete(BaseModel):
     genre_ids: list[int]
     tag_ids: list[int] = []
+    book_ids: list[int] = []
     preferred_language: str | None = None
 
 
