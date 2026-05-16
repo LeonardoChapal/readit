@@ -9,11 +9,33 @@ from models.book import Book
 from models.vote import Vote
 from models.user import User
 from models.notification import Notification
+from models.user_interest import UserInterest
 from schemas.review import ReviewCreate, ReviewUpdate, ReviewOut
 from schemas.vote import VoteCreate, VoteResult
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
+
+
+def _update_genre_interest(db: Session, user_id: int, book: Book, delta: float = 0.05) -> None:
+    if not book.genre_id:
+        return
+    existing = db.query(UserInterest).filter(
+        UserInterest.user_id == user_id,
+        UserInterest.entity_type == "genre",
+        UserInterest.entity_id == book.genre_id,
+    ).first()
+    if existing:
+        existing.weight = min(float(existing.weight) + delta, 3.0)
+    else:
+        db.add(UserInterest(
+            user_id=user_id,
+            entity_type="genre",
+            entity_id=book.genre_id,
+            weight=0.1,
+            source="inferred",
+        ))
+    db.commit()
 
 
 def _load_review(db: Session, review_id: int) -> Review | None:
@@ -124,6 +146,11 @@ def vote_review(
     if user_vote == 1 and review.user_id != current_user.id:
         db.add(Notification(user_id=review.user_id, actor_id=current_user.id, type="vote", review_id=review_id))
         db.commit()
+
+    if user_vote == 1:
+        book = db.query(Book).filter(Book.id == review.book_id).first()
+        if book:
+            _update_genre_interest(db, current_user.id, book)
 
     return VoteResult(score=review.score, user_vote=user_vote)
 

@@ -6,12 +6,14 @@ import UserAvatar from '../components/UserAvatar'
 import StarRating from '../components/StarRating'
 import Highlight from '../components/Highlight'
 import { api } from '../lib/api'
+import { useActivity } from '../hooks/useActivity'
 import type { SearchResults } from '../types/review'
 import type { Genre } from '../types/book'
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams()
   const q = searchParams.get('q') ?? ''
+  const { track } = useActivity()
 
   const [results, setResults] = useState<SearchResults>({ books: [], reviews: [], users: [] })
   const [genres, setGenres] = useState<Genre[]>([])
@@ -25,6 +27,7 @@ export default function SearchPage() {
   useEffect(() => {
     if (q.trim().length < 2) { setResults({ books: [], reviews: [], users: [] }); return }
     setLoading(true)
+    track({ activity_type: 'search', metadata: { query: q.trim() } })
     const url = `/api/v1/search?q=${encodeURIComponent(q.trim())}${genreId ? `&genre_id=${genreId}` : ''}`
     api.get<SearchResults>(url)
       .then(setResults)

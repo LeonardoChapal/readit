@@ -88,6 +88,12 @@ export default function BookPage() {
     try {
       const data = await api.put<ReadingListEntry>(`/api/v1/reading-list/${id}`, { status })
       setRlEntry(data)
+      track({
+        activity_type: rlEntry ? 'change_list_status' : 'add_to_list',
+        entity_type: 'book',
+        entity_id: Number(id),
+        metadata: { status },
+      })
     } finally {
       setRlLoading(false)
     }
@@ -100,6 +106,7 @@ export default function BookPage() {
     try {
       await api.delete(`/api/v1/reading-list/${id}`)
       setRlEntry(null)
+      track({ activity_type: 'change_list_status', entity_type: 'book', entity_id: Number(id), metadata: { status: null } })
     } finally {
       setRlLoading(false)
     }

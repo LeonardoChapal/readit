@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Comment, CommentNode } from '../types/comment'
 import { useAuth } from '../hooks/useAuth'
+import { useActivity } from '../hooks/useActivity'
 import { api } from '../lib/api'
 import UserAvatar from './UserAvatar'
 
@@ -30,6 +31,7 @@ interface CommentItemProps {
 
 function CommentItem({ comment, reviewId, onAdd, onEdit, onDelete, depth }: CommentItemProps) {
   const { user } = useAuth()
+  const { track } = useActivity()
   const [replyOpen, setReplyOpen] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [replyBusy, setReplyBusy] = useState(false)
@@ -54,6 +56,7 @@ function CommentItem({ comment, reviewId, onAdd, onEdit, onDelete, depth }: Comm
         parent_comment_id: comment.id,
       })
       onAdd(c)
+      track({ activity_type: 'comment', entity_type: 'review', entity_id: reviewId })
       setReplyText('')
       setReplyOpen(false)
     } finally {
@@ -184,6 +187,7 @@ interface Props {
 
 export default function CommentThread({ initialComments, reviewId }: Props) {
   const { user } = useAuth()
+  const { track } = useActivity()
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -208,6 +212,7 @@ export default function CommentThread({ initialComments, reviewId }: Props) {
         content: text.trim(),
       })
       handleAdd(c)
+      track({ activity_type: 'comment', entity_type: 'review', entity_id: reviewId })
       setText('')
     } finally {
       setBusy(false)

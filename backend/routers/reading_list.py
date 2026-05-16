@@ -4,10 +4,32 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models.reading_list import ReadingList
 from models.book import Book
+from models.user_interest import UserInterest
 from schemas.reading_list import ReadingListSet, ReadingListOut
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/reading-list", tags=["reading-list"])
+
+
+def _update_genre_interest(db: Session, user_id: int, book: Book, delta: float = 0.05) -> None:
+    if not book.genre_id:
+        return
+    existing = db.query(UserInterest).filter(
+        UserInterest.user_id == user_id,
+        UserInterest.entity_type == "genre",
+        UserInterest.entity_id == book.genre_id,
+    ).first()
+    if existing:
+        existing.weight = min(float(existing.weight) + delta, 3.0)
+    else:
+        db.add(UserInterest(
+            user_id=user_id,
+            entity_type="genre",
+            entity_id=book.genre_id,
+            weight=0.1,
+            source="inferred",
+        ))
+    db.commit()
 
 VALID_STATUSES = {"want_to_read", "reading", "read"}
 
@@ -38,7 +60,8 @@ def set_book_status(book_id: int, data: ReadingListSet, db: Session = Depends(ge
     if data.status not in VALID_STATUSES:
         raise HTTPException(400, "Estado inválido")
 
-    if not db.query(Book).filter(Book.id == book_id).first():
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
         raise HTTPException(404, "Libro no encontrado")
 
     entry = db.query(ReadingList).filter(
@@ -54,6 +77,7 @@ def set_book_status(book_id: int, data: ReadingListSet, db: Session = Depends(ge
 
     db.commit()
     db.refresh(entry)
+    _update_genre_interest(db, current_user.id, book)
 
     return (
         db.query(ReadingList)

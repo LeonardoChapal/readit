@@ -8,6 +8,7 @@ import StarRating from '../components/StarRating'
 import StarPicker from '../components/StarPicker'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import { useActivity } from '../hooks/useActivity'
 import type { Review } from '../types/review'
 import type { Comment } from '../types/comment'
 
@@ -15,6 +16,7 @@ export default function ReviewDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { track } = useActivity()
 
   const [review, setReview] = useState<Review | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -65,6 +67,7 @@ export default function ReviewDetailPage() {
       )
       setScore(res.score)
       setUserVote(res.user_vote)
+      track({ activity_type: 'vote', entity_type: 'review', entity_id: Number(id), metadata: { value } })
     } finally {
       setVoting(false)
     }
