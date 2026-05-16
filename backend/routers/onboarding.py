@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import traceback
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -34,65 +36,81 @@ def complete_onboarding(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    db.query(UserInterest).filter(
-        UserInterest.user_id == current_user.id,
-        UserInterest.source == "onboarding",
-    ).delete()
+    try:
+        # 1. Limpiar intereses previos de onboarding
+        db.query(UserInterest).filter(
+            UserInterest.user_id == current_user.id,
+            UserInterest.source == "onboarding",
+        ).delete(synchronize_session=False)
+        db.flush()
 
-    for genre_id in body.genre_ids:
-        db.add(UserInterest(
-            user_id=current_user.id,
-            entity_type="genre",
-            entity_id=genre_id,
-            weight=1.0,
-            source="onboarding",
-        ))
+        # 2. Acumular en memoria los intereses deseados (sin duplicados posibles)
+        # key = (entity_type, entity_id), value = (weight, source)
+        interests: dict[tuple[str, int], tuple[float, str]] = {}
 
-    db.flush()  # hace visibles los intereses de género antes del loop de libros
+        for genre_id in body.genre_ids:
+            interests[("genre", genre_id)] = (1.0, "onboarding")
 
-    for tag_id in body.tag_ids:
-        db.add(UserInterest(
-            user_id=current_user.id,
-            entity_type="tag",
-            entity_id=tag_id,
-            weight=0.8,
-            source="onboarding",
-        ))
+        for tag_id in body.tag_ids:
+            interests[("tag", tag_id)] = (0.8, "onboarding")
 
-    for book_id in body.book_ids:
-        book = db.query(Book).filter(Book.id == book_id).first()
-        if not book:
-            continue
-        entry = db.query(ReadingList).filter(
-            ReadingList.user_id == current_user.id,
-            ReadingList.book_id == book_id,
-        ).first()
-        if not entry:
-            db.add(ReadingList(user_id=current_user.id, book_id=book_id, status="read"))
-        if book.genre_id:
+        # 3. Procesar libros: agregar a lista de lectura y acumular intereses inferidos
+        for book_id in body.book_ids:
+            book = db.query(Book).filter(Book.id == book_id).first()
+            if not book:
+                continue
+            entry = db.query(ReadingList).filter(
+                ReadingList.user_id == current_user.id,
+                ReadingList.book_id == book_id,
+            ).first()
+            if not entry:
+                db.add(ReadingList(user_id=current_user.id, book_id=book_id, status="read"))
+            if book.genre_id:
+                key = ("genre", book.genre_id)
+                if key in interests:
+                    w, src = interests[key]
+                    interests[key] = (min(w + 0.1, 3.0), src)
+                else:
+                    interests[key] = (0.1, "inferred")
+
+        # 4. Escribir intereses, haciendo upsert manualmente
+        for (etype, eid), (weight, source) in interests.items():
             existing = db.query(UserInterest).filter(
                 UserInterest.user_id == current_user.id,
-                UserInterest.entity_type == "genre",
-                UserInterest.entity_id == book.genre_id,
+                UserInterest.entity_type == etype,
+                UserInterest.entity_id == eid,
             ).first()
             if existing:
                 existing.weight = min(float(existing.weight) + 0.1, 3.0)
             else:
                 db.add(UserInterest(
                     user_id=current_user.id,
-                    entity_type="genre",
-                    entity_id=book.genre_id,
-                    weight=0.1,
-                    source="inferred",
+                    entity_type=etype,
+                    entity_id=eid,
+                    weight=weight,
+                    source=source,
                 ))
 
-    current_user.onboarding_completed = True
-    if body.preferred_language:
-        current_user.preferred_language = body.preferred_language
+        # 5. Marcar onboarding completado
+        current_user.onboarding_completed = True
+        if body.preferred_language:
+            current_user.preferred_language = body.preferred_language
 
-    db.commit()
-    _assign_group(current_user.id, body.genre_ids, db)
-    return {"ok": True}
+        db.commit()
+
+        # 6. Asignar a grupo (no crítico, no debe romper onboarding si falla)
+        try:
+            _assign_group(current_user.id, body.genre_ids, db)
+        except Exception as e:
+            print(f"[onboarding/_assign_group] {e}")
+            traceback.print_exc()
+
+        return {"ok": True}
+
+    except Exception as e:
+        db.rollback()
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error en onboarding: {type(e).__name__}: {e}")
 
 
 def _assign_group(user_id: int, genre_ids: list[int], db: Session):
