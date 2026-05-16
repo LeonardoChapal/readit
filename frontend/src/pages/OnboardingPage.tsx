@@ -28,6 +28,7 @@ export default function OnboardingPage() {
   const [selectedGenres, setSelectedGenres] = useState<Set<number>>(new Set())
   const [selectedBooks, setSelectedBooks] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState<'genres' | 'books'>('genres')
   const [booksForStep2, setBooksForStep2] = useState<BookOption[]>([])
 
@@ -63,13 +64,16 @@ export default function OnboardingPage() {
 
   async function handleComplete() {
     setLoading(true)
+    setError(null)
     try {
       await api.post('/api/v1/onboarding/complete', {
         genre_ids: Array.from(selectedGenres),
         book_ids: Array.from(selectedBooks),
       })
-      await refreshUser()
+      try { await refreshUser() } catch { /* navegar igual */ }
       navigate('/')
+    } catch {
+      setError('Hubo un error al guardar. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -224,6 +228,8 @@ export default function OnboardingPage() {
               {selectedBooks.size === MAX_BOOKS && (
                 <p className="text-xs text-[#f97316] mb-4">Máximo {MAX_BOOKS} libros. Haz clic en uno para deseleccionarlo.</p>
               )}
+
+              {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
               <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button
