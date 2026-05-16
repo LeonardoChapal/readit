@@ -50,11 +50,18 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
     book_tags = db.query(BookTag).options(joinedload(BookTag.tag)).filter(BookTag.book_id == book_id).all()
     tags = [TagSimple(id=bt.tag.id, name=bt.tag.name) for bt in book_tags]
 
-    result = BookDetail.model_validate(book)
-    result.avg_rating = avg_rating
-    result.rating_count = rating_count
-    result.tags = tags
-    return result
+    # Construir BookDetail manualmente para evitar que Pydantic intente validar
+    # book.tags (que son objetos BookTag, no TagSimple) vía from_attributes
+    return BookDetail(
+        id=book.id,
+        title=book.title,
+        author=book.author,
+        year=book.year,
+        genre=book.genre,
+        avg_rating=avg_rating,
+        rating_count=rating_count,
+        tags=tags,
+    )
 
 
 @router.get("/{book_id}/related", response_model=list[BookOut])
