@@ -65,15 +65,26 @@ export default function OnboardingPage() {
   async function handleComplete() {
     setLoading(true)
     setError(null)
+    const payload = {
+      genre_ids: Array.from(selectedGenres),
+      book_ids: Array.from(selectedBooks),
+    }
+    console.log('[Onboarding] POST /complete', payload)
     try {
-      await api.post('/api/v1/onboarding/complete', {
-        genre_ids: Array.from(selectedGenres),
-        book_ids: Array.from(selectedBooks),
-      })
-      try { await refreshUser() } catch { /* navegar igual */ }
+      const res = await api.post('/api/v1/onboarding/complete', payload)
+      console.log('[Onboarding] OK', res)
+      try { await refreshUser() } catch (e) { console.warn('[Onboarding] refreshUser falló', e) }
       navigate('/')
-    } catch {
-      setError('Hubo un error al guardar. Intenta de nuevo.')
+      // Fallback por si navigate no funciona
+      setTimeout(() => {
+        if (window.location.pathname.includes('onboarding')) {
+          window.location.href = '/'
+        }
+      }, 600)
+    } catch (e) {
+      console.error('[Onboarding] ERROR', e)
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(`Error: ${msg}`)
     } finally {
       setLoading(false)
     }
@@ -229,7 +240,11 @@ export default function OnboardingPage() {
                 <p className="text-xs text-[#f97316] mb-4">Máximo {MAX_BOOKS} libros. Haz clic en uno para deseleccionarlo.</p>
               )}
 
-              {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-lg px-3 py-2 mb-3">
+                  {error}
+                </div>
+              )}
 
               <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button
