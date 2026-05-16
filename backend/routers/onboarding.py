@@ -48,6 +48,8 @@ def complete_onboarding(
             source="onboarding",
         ))
 
+    db.flush()  # hace visibles los intereses de género antes del loop de libros
+
     for tag_id in body.tag_ids:
         db.add(UserInterest(
             user_id=current_user.id,
