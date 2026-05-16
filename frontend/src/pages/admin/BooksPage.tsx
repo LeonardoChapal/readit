@@ -26,6 +26,12 @@ export default function BooksPage() {
   const [genres, setGenres] = useState<Genre[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+
+  function showToast(type: 'success' | 'error', msg: string) {
+    setToast({ type, msg })
+    setTimeout(() => setToast(null), 3500)
+  }
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState<BookForm>(EMPTY)
   const [coverBusts, setCoverBusts] = useState<Record<number, number>>({})
@@ -64,14 +70,24 @@ export default function BooksPage() {
   }
 
   async function addTag(bookId: number, tagId: number) {
-    await api.post(`/api/v1/books/${bookId}/tags/${tagId}`, {})
-    const tag = allTags.find(t => t.id === tagId)
-    if (tag) setBookTags(prev => ({ ...prev, [bookId]: [...(prev[bookId] ?? []), tag] }))
+    try {
+      await api.post(`/api/v1/books/${bookId}/tags/${tagId}`, {})
+      const tag = allTags.find(t => t.id === tagId)
+      if (tag) setBookTags(prev => ({ ...prev, [bookId]: [...(prev[bookId] ?? []), tag] }))
+      showToast('success', 'Etiqueta agregada')
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'No se pudo agregar la etiqueta')
+    }
   }
 
   async function removeTag(bookId: number, tagId: number) {
-    await api.delete(`/api/v1/books/${bookId}/tags/${tagId}`)
-    setBookTags(prev => ({ ...prev, [bookId]: (prev[bookId] ?? []).filter(t => t.id !== tagId) }))
+    try {
+      await api.delete(`/api/v1/books/${bookId}/tags/${tagId}`)
+      setBookTags(prev => ({ ...prev, [bookId]: (prev[bookId] ?? []).filter(t => t.id !== tagId) }))
+      showToast('success', 'Etiqueta eliminada')
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'No se pudo eliminar la etiqueta')
+    }
   }
 
   async function searchOpenLibrary() {
@@ -102,6 +118,9 @@ export default function BooksPage() {
       })
       setBooks(prev => [created, ...prev])
       setImportedKeys(prev => new Set([...prev, doc.key]))
+      showToast('success', `"${doc.title}" importado`)
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'No se pudo importar el libro')
     } finally {
       setImportingKey(null)
     }
@@ -120,29 +139,46 @@ export default function BooksPage() {
 
   async function saveEdit() {
     if (!editId) return
-    const updated = await api.put<Book>(`/api/v1/admin/books/${editId}`, {
-      title:    form.title,
-      author:   form.author,
-      year:     form.year ? parseInt(form.year) : null,
-      genre_id: form.genre_id ? parseInt(form.genre_id) : null,
-    })
-    setBooks(prev => prev.map(b => b.id === editId ? updated : b))
-    setEditId(null)
+    try {
+      const updated = await api.put<Book>(`/api/v1/admin/books/${editId}`, {
+        title:    form.title,
+        author:   form.author,
+        year:     form.year ? parseInt(form.year) : null,
+        genre_id: form.genre_id ? parseInt(form.genre_id) : null,
+      })
+      setBooks(prev => prev.map(b => b.id === editId ? updated : b))
+      setEditId(null)
+      showToast('success', 'Libro actualizado')
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'No se pudo actualizar el libro')
+    }
   }
 
   async function deleteBook(id: number) {
-    if (!window.confirm('¿Eliminar este libro? Se eliminarán también sus reseñas.')) return
-    await api.delete(`/api/v1/admin/books/${id}`)
-    setBooks(prev => prev.filter(b => b.id !== id))
+    const book = books.find(b => b.id === id)
+    if (!window.confirm(`¿Eliminar "${book?.title ?? 'este libro'}"? Se eliminarán también sus reseñas, comentarios y listas de lectura asociadas.`)) return
+    try {
+      await api.delete(`/api/v1/admin/books/${id}`)
+      setBooks(prev => prev.filter(b => b.id !== id))
+      showToast('success', `"${book?.title ?? 'Libro'}" eliminado`)
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'No se pudo eliminar el libro')
+    }
   }
 
   async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!uploadingId || !e.target.files?.[0]) return
     const file = e.target.files[0]
-    await uploadBookCover(uploadingId, file)
-    setCoverBusts(prev => ({ ...prev, [uploadingId]: Date.now() }))
-    setUploadingId(null)
-    e.target.value = ''
+    try {
+      await uploadBookCover(uploadingId, file)
+      setCoverBusts(prev => ({ ...prev, [uploadingId]: Date.now() }))
+      showToast('success', 'Portada actualizada')
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'No se pudo subir la portada')
+    } finally {
+      setUploadingId(null)
+      e.target.value = ''
+    }
   }
 
   function triggerUpload(bookId: number) {
@@ -157,6 +193,16 @@ export default function BooksPage() {
 
   return (
     <div>
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg border text-sm font-medium animate-fade-in ${
+          toast.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Libros</h1>
 
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />

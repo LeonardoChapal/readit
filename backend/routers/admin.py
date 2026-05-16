@@ -10,6 +10,9 @@ from models.book import Book
 from models.review import Review
 from models.comment import Comment
 from models.genre import Genre
+from models.vote import Vote
+from models.notification import Notification
+from models.reading_list import ReadingList
 from schemas.user import UserOut
 from schemas.book import BookCreate, BookOut
 from schemas.review import ReviewOut
@@ -191,6 +194,16 @@ def delete_book(
     book = db.query(Book).filter(Book.id == book_id).first()
     if not book:
         raise HTTPException(404, "Libro no encontrado")
+
+    # Eliminar dependencias que no tienen ON DELETE CASCADE
+    review_ids = [r.id for r in db.query(Review.id).filter(Review.book_id == book_id).all()]
+    if review_ids:
+        db.query(Notification).filter(Notification.review_id.in_(review_ids)).delete(synchronize_session=False)
+        db.query(Vote).filter(Vote.review_id.in_(review_ids)).delete(synchronize_session=False)
+        db.query(Comment).filter(Comment.review_id.in_(review_ids)).delete(synchronize_session=False)
+        db.query(Review).filter(Review.id.in_(review_ids)).delete(synchronize_session=False)
+    db.query(ReadingList).filter(ReadingList.book_id == book_id).delete(synchronize_session=False)
+
     db.delete(book)
     db.commit()
 
