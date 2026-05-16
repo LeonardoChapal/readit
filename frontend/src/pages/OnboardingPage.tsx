@@ -12,6 +12,7 @@ interface BookOption {
   id: number
   title: string
   author: string
+  genre_id: number | null
 }
 
 interface OnboardingOptions {
@@ -77,6 +78,14 @@ export default function OnboardingPage() {
     api.post('/api/v1/onboarding/complete', { genre_ids: [], book_ids: [] }).catch(() => {})
     refreshUser().finally(() => navigate('/'))
   }
+
+  const sortedBooks = [...options.books].sort((a, b) => {
+    const aMatch = a.genre_id !== null && selectedGenres.has(a.genre_id)
+    const bMatch = b.genre_id !== null && selectedGenres.has(b.genre_id)
+    if (aMatch && !bMatch) return -1
+    if (!aMatch && bMatch) return 1
+    return 0
+  })
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-4 py-12">
@@ -172,7 +181,7 @@ export default function OnboardingPage() {
                 <p className="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">No hay libros disponibles aún.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4 max-h-72 overflow-y-auto pr-1">
-                  {options.books.map(b => {
+                  {sortedBooks.map(b => {
                     const selected = selectedBooks.has(b.id)
                     const limitReached = !selected && selectedBooks.size >= MAX_BOOKS
                     return (

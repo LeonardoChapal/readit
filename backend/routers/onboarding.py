@@ -24,7 +24,7 @@ def get_options(db: Session = Depends(get_db)):
     return {
         "genres": [GenreOut.model_validate(g) for g in genres],
         "tags": [TagOut.model_validate(t) for t in tags],
-        "books": [{"id": b.id, "title": b.title, "author": b.author} for b in books],
+        "books": [{"id": b.id, "title": b.title, "author": b.author, "genre_id": b.genre_id} for b in books],
     }
 
 
