@@ -5,6 +5,9 @@ import { useAuth } from '../hooks/useAuth'
 import BookCover from '../components/BookCover'
 import type { Genre } from '../types/book'
 
+const MAX_GENRES = 3
+const MAX_BOOKS = 5
+
 interface BookOption {
   id: number
   title: string
@@ -35,7 +38,11 @@ export default function OnboardingPage() {
   function toggleGenre(id: number) {
     setSelectedGenres(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else if (next.size < MAX_GENRES) {
+        next.add(id)
+      }
       return next
     })
   }
@@ -43,13 +50,16 @@ export default function OnboardingPage() {
   function toggleBook(id: number) {
     setSelectedBooks(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else if (next.size < MAX_BOOKS) {
+        next.add(id)
+      }
       return next
     })
   }
 
   async function handleComplete() {
-    if (selectedGenres.size === 0) return
     setLoading(true)
     try {
       await api.post('/api/v1/onboarding/complete', {
@@ -93,24 +103,43 @@ export default function OnboardingPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           {step === 'genres' ? (
             <>
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-                Géneros ({selectedGenres.size} seleccionados)
-              </h2>
-              <div className="flex flex-wrap gap-2 mb-6">
-                {options.genres.map(g => (
-                  <button
-                    key={g.id}
-                    onClick={() => toggleGenre(g.id)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition border ${
-                      selectedGenres.has(g.id)
-                        ? 'bg-[#f97316] text-white border-[#f97316]'
-                        : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-[#f97316] hover:text-[#f97316]'
-                    }`}
-                  >
-                    {g.name}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Géneros
+                </h2>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  selectedGenres.size === MAX_GENRES
+                    ? 'bg-[#f97316] text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {selectedGenres.size}/{MAX_GENRES}
+                </span>
               </div>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {options.genres.map(g => {
+                  const selected = selectedGenres.has(g.id)
+                  const limitReached = !selected && selectedGenres.size >= MAX_GENRES
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => toggleGenre(g.id)}
+                      disabled={limitReached}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition border ${
+                        selected
+                          ? 'bg-[#f97316] text-white border-[#f97316]'
+                          : limitReached
+                          ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                          : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-[#f97316] hover:text-[#f97316]'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedGenres.size === MAX_GENRES && (
+                <p className="text-xs text-[#f97316] mb-4">Máximo {MAX_GENRES} géneros. Haz clic en uno para deseleccionarlo.</p>
+              )}
               <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                 <button onClick={skip} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
                   Omitir por ahora
@@ -128,22 +157,30 @@ export default function OnboardingPage() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Libros leídos{selectedBooks.size > 0 ? ` (${selectedBooks.size})` : ''} — opcional
+                  Libros leídos — opcional
                 </h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Ayuda a afinar tus recomendaciones</p>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  selectedBooks.size === MAX_BOOKS
+                    ? 'bg-[#f97316] text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                }`}>
+                  {selectedBooks.size}/{MAX_BOOKS}
+                </span>
               </div>
 
               {options.books.length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">No hay libros disponibles aún.</p>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-6 max-h-72 overflow-y-auto pr-1">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4 max-h-72 overflow-y-auto pr-1">
                   {options.books.map(b => {
                     const selected = selectedBooks.has(b.id)
+                    const limitReached = !selected && selectedBooks.size >= MAX_BOOKS
                     return (
                       <button
                         key={b.id}
                         onClick={() => toggleBook(b.id)}
-                        className="flex flex-col items-center gap-1.5 group text-left"
+                        disabled={limitReached}
+                        className={`flex flex-col items-center gap-1.5 group text-left transition-opacity ${limitReached ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         <div className={`relative w-full rounded-lg overflow-hidden ring-2 transition-all ${
                           selected ? 'ring-[#f97316] scale-95' : 'ring-transparent hover:ring-orange-200 dark:hover:ring-orange-800'
@@ -168,6 +205,10 @@ export default function OnboardingPage() {
                     )
                   })}
                 </div>
+              )}
+
+              {selectedBooks.size === MAX_BOOKS && (
+                <p className="text-xs text-[#f97316] mb-4">Máximo {MAX_BOOKS} libros. Haz clic en uno para deseleccionarlo.</p>
               )}
 
               <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
