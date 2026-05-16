@@ -25,6 +25,18 @@ interface EditForm {
   confirm_password: string
 }
 
+interface InterestItem {
+  id: number
+  name: string
+  weight: number
+  source: string
+}
+
+interface MyInterests {
+  genres: InterestItem[]
+  tags: InterestItem[]
+}
+
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>()
   const { user, updateUser } = useAuth()
@@ -40,6 +52,7 @@ export default function ProfilePage() {
   const LIMIT = 20
 
   const [readingList, setReadingList] = useState<ReadingListEntry[]>([])
+  const [myInterests, setMyInterests] = useState<MyInterests | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
@@ -87,6 +100,9 @@ export default function ProfilePage() {
     if (!isOwner) return
     api.get<ReadingListEntry[]>('/api/v1/reading-list')
       .then(setReadingList)
+      .catch(() => {})
+    api.get<MyInterests>('/api/v1/users/me/interests')
+      .then(setMyInterests)
       .catch(() => {})
   }, [isOwner])
 
@@ -396,6 +412,57 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Tus intereses (solo el dueño del perfil) */}
+        {isOwner && myInterests && (myInterests.genres.length > 0 || myInterests.tags.length > 0) && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-800 dark:text-gray-100">Tus intereses</h2>
+              <Link to="/onboarding" className="text-xs text-[#f97316] hover:underline font-medium">
+                Editar
+              </Link>
+            </div>
+
+            {myInterests.genres.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Géneros</p>
+                <div className="flex flex-wrap gap-2">
+                  {myInterests.genres.map(g => (
+                    <span
+                      key={g.id}
+                      title={`Peso ${g.weight.toFixed(2)} · ${g.source}`}
+                      className={`text-xs font-medium px-3 py-1 rounded-full border ${
+                        g.source === 'onboarding'
+                          ? 'bg-orange-50 dark:bg-orange-900/30 text-[#f97316] border-orange-100 dark:border-orange-800'
+                          : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                      }`}
+                    >
+                      {g.name}
+                      {g.source === 'inferred' && <span className="ml-1 opacity-60">inferido</span>}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {myInterests.tags.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Etiquetas</p>
+                <div className="flex flex-wrap gap-2">
+                  {myInterests.tags.map(t => (
+                    <span
+                      key={t.id}
+                      title={`Peso ${t.weight.toFixed(2)} · ${t.source}`}
+                      className="text-xs font-medium bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-full"
+                    >
+                      #{t.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

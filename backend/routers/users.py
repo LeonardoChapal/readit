@@ -7,10 +7,12 @@ from database import get_db
 from models.user import User
 from models.book import Book
 from models.genre import Genre
+from models.tag import Tag
 from models.review import Review
 from models.comment import Comment
 from models.follow import Follow
 from models.notification import Notification
+from models.user_interest import UserInterest
 from schemas.review import ReviewOut
 from schemas.user import UserOut, UserUpdate
 from auth import get_current_user, hash_password, verify_password
@@ -87,6 +89,34 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/me/interests")
+def get_my_interests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    interests = (
+        db.query(UserInterest)
+        .filter(UserInterest.user_id == current_user.id)
+        .all()
+    )
+    genre_ids = [i.entity_id for i in interests if i.entity_type == "genre"]
+    tag_ids = [i.entity_id for i in interests if i.entity_type == "tag"]
+
+    genres = {g.id: g.name for g in db.query(Genre).filter(Genre.id.in_(genre_ids)).all()} if genre_ids else {}
+    tags = {t.id: t.name for t in db.query(Tag).filter(Tag.id.in_(tag_ids)).all()} if tag_ids else {}
+
+    return {
+        "genres": [
+            {"id": i.entity_id, "name": genres.get(i.entity_id, "—"), "weight": float(i.weight), "source": i.source}
+            for i in interests if i.entity_type == "genre" and i.entity_id in genres
+        ],
+        "tags": [
+            {"id": i.entity_id, "name": tags.get(i.entity_id, "—"), "weight": float(i.weight), "source": i.source}
+            for i in interests if i.entity_type == "tag" and i.entity_id in tags
+        ],
+    }
 
 
 @router.get("/{username}/stats")

@@ -5,6 +5,8 @@ from datetime import datetime, timezone, timedelta
 
 from database import get_db
 from models.book import Book
+from models.genre import Genre
+from models.tag import Tag
 from models.user_interest import UserInterest
 from models.user_activity import UserActivity
 from models.recommendation_cache import RecommendationCache
@@ -84,6 +86,10 @@ def _compute_recommendations(user_id: int, db: Session):
     if not genre_weights and not tag_weights:
         return
 
+    # Mapas de nombres para construir reason_code legible
+    genre_names: dict[int, str] = {g.id: g.name for g in db.query(Genre).all()}
+    tag_names: dict[int, str] = {t.id: t.name for t in db.query(Tag).all()}
+
     excluded = set()
     for rl in db.query(ReadingList).filter(ReadingList.user_id == user_id).all():
         excluded.add(rl.book_id)
@@ -112,22 +118,37 @@ def _compute_recommendations(user_id: int, db: Session):
     scored = []
     for book in books:
         score = 0.0
-        reason = None
+        # contribuciones nombradas (label, valor) para elegir la mejor razón
+        contribs: list[tuple[str, float]] = []
 
         if book.genre_id and book.genre_id in genre_weights:
-            score += genre_weights[book.genre_id] * 0.7
-            reason = "interest_match"
+            genre_contrib = genre_weights[book.genre_id] * 0.7
+            score += genre_contrib
+            gname = genre_names.get(book.genre_id)
+            if gname:
+                contribs.append((f"genre:{gname}", genre_contrib))
 
         book_tag_ids = {bt.tag_id for bt in book.tags}
-        tag_score = sum(tag_weights.get(tid, 0) for tid in book_tag_ids)
-        if tag_score > 0:
-            score += tag_score * 0.3
-            reason = reason or "interest_match"
+        for tid in book_tag_ids:
+            tw = tag_weights.get(tid, 0)
+            if tw > 0:
+                tag_contrib = tw * 0.3
+                score += tag_contrib
+                tname = tag_names.get(tid)
+                if tname:
+                    contribs.append((f"tag:{tname}", tag_contrib))
 
-        score += review_scores.get(book.id, 0) * 0.2
+        pop_contrib = review_scores.get(book.id, 0) * 0.2
+        score += pop_contrib
 
         if score > 0:
-            scored.append((book.id, round(score, 4), reason or "interest_match"))
+            # razón = mayor contribución específica; si nada, "popular"
+            if contribs:
+                contribs.sort(key=lambda c: c[1], reverse=True)
+                reason = contribs[0][0]
+            else:
+                reason = "popular"
+            scored.append((book.id, round(score, 4), reason))
 
     scored.sort(key=lambda x: x[1], reverse=True)
     top = scored[:20]

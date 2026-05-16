@@ -154,20 +154,37 @@ export default function HomePage() {
             <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">Para ti</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-10">
-            {recommendations.map(rec => (
-              <Link
-                key={rec.id}
-                to={`/libro/${rec.book.id}`}
-                onClick={() => api.post(`/api/v1/recommendations/${rec.id}/click`, {}).catch(() => {})}
-                className="flex flex-col gap-2 group"
-              >
-                <BookCover bookId={rec.book.id} title={rec.book.title} className="w-full aspect-[2/3] rounded-lg object-cover shadow-sm group-hover:shadow-md transition" />
-                <div>
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 group-hover:text-[#f97316] transition">{rec.book.title}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{rec.book.author}</p>
-                </div>
-              </Link>
-            ))}
+            {recommendations.map(rec => {
+              const reasonLabel = (() => {
+                if (!rec.reason_code) return null
+                if (rec.reason_code === 'popular') return 'Popular'
+                const [type, ...rest] = rec.reason_code.split(':')
+                const name = rest.join(':')
+                if (!name) return null
+                if (type === 'genre') return `Por ${name}`
+                if (type === 'tag') return `#${name}`
+                return null
+              })()
+              return (
+                <Link
+                  key={rec.id}
+                  to={`/libro/${rec.book.id}`}
+                  onClick={() => api.post(`/api/v1/recommendations/${rec.id}/click`, {}).catch(() => {})}
+                  className="flex flex-col gap-2 group"
+                >
+                  <BookCover bookId={rec.book.id} title={rec.book.title} className="w-full aspect-[2/3] rounded-lg object-cover shadow-sm group-hover:shadow-md transition" />
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 group-hover:text-[#f97316] transition">{rec.book.title}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{rec.book.author}</p>
+                    {reasonLabel && (
+                      <span className="inline-block mt-1 text-[10px] font-medium bg-orange-50 dark:bg-orange-900/30 text-[#f97316] px-1.5 py-0.5 rounded-full border border-orange-100 dark:border-orange-800 truncate max-w-full">
+                        {reasonLabel}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </section>
       )}
